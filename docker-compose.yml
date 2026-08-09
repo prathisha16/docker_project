@@ -2,7 +2,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: "./frontend "
     container_name: docker-frontend
     ports:
       - "8081:80"
@@ -15,7 +15,7 @@ services:
 
   api:
     build:
-      context: ./api
+      context: "./api "
     container_name: docker-api
     ports:
       - "5000:5000"
@@ -41,20 +41,16 @@ services:
       MYSQL_DATABASE_FILE: /run/secrets/mysql_database
       MYSQL_USER_FILE: /run/secrets/mysql_user
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
-
     secrets:
       - mysql_root_password
       - mysql_user
       - mysql_password
       - mysql_database
-
     volumes:
       - docker_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-
+      - "./database /init.sql:/docker-entrypoint-initdb.d/init.sql:ro"
     networks:
       - docker-network
-
     healthcheck:
       test:
         [
@@ -70,14 +66,13 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-
     restart: always
 
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: docker-phpmyadmin
     ports:
-      - "8081:80"
+      - "8082:80"
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
@@ -88,7 +83,6 @@ services:
       - docker-network
     restart: always
 
-
 networks:
 
   docker-network:
@@ -97,23 +91,21 @@ networks:
       config:
         - subnet: 172.20.0.0/16
 
-
 volumes:
 
   docker_data:
     driver: local
 
-
 secrets:
 
   mysql_root_password:
-    file: ./secrets/mysql_root_password
+    file: "./secrets /mysql_root_password"
 
   mysql_user:
-    file: ./secrets/mysql_user
+    file: "./secrets /mysql_user"
 
   mysql_password:
-    file: ./secrets/mysql_password
+    file: "./secrets /mysql_password"
 
   mysql_database:
-    file: ./secrets/mysql_database
+    file: "./secrets /mysql_database"
