@@ -5,13 +5,15 @@ pipeline {
     stages {
 
         /*
-         * 1. Clean workspace and get latest code from GitHub
+         * 1. Clean workspace and checkout latest code
          */
         stage('Checkout') {
 
             steps {
 
+                echo '======================================'
                 echo 'Cleaning Jenkins workspace...'
+                echo '======================================'
 
                 deleteDir()
 
@@ -19,22 +21,27 @@ pipeline {
 
                 checkout scm
 
+                echo '======================================'
                 echo 'Checking repository contents...'
+                echo '======================================'
 
                 sh '''
-                    echo "======================================"
                     echo "Current workspace:"
                     pwd
 
-                    echo "======================================"
+                    echo ""
+                    echo "Workspace variable:"
+                    echo "$WORKSPACE"
+
+                    echo ""
                     echo "Git commit:"
                     git rev-parse --short HEAD
 
-                    echo "======================================"
+                    echo ""
                     echo "Git branch:"
                     git branch --show-current
 
-                    echo "======================================"
+                    echo ""
                     echo "Repository contents:"
                     ls -la
                 '''
@@ -43,33 +50,53 @@ pipeline {
 
 
         /*
-         * 2. Verify required project directories
+         * 2. Verify project structure
          */
         stage('Verify Project Structure') {
 
             steps {
 
+                echo '======================================'
                 echo 'Verifying project structure...'
+                echo '======================================'
 
                 sh '''
+                    echo "Current directory:"
+                    pwd
+
+                    echo ""
+                    echo "Workspace:"
+                    echo "$WORKSPACE"
+
+                    echo ""
                     echo "Checking frontend directory..."
-                    test -d frontend
-                    ls -la frontend
+                    test -d "$WORKSPACE/frontend"
+                    ls -ld "$WORKSPACE/frontend"
+                    ls -la "$WORKSPACE/frontend"
 
+                    echo ""
                     echo "Checking API directory..."
-                    test -d api
-                    ls -la api
+                    test -d "$WORKSPACE/api"
+                    ls -ld "$WORKSPACE/api"
+                    ls -la "$WORKSPACE/api"
 
+                    echo ""
                     echo "Checking database directory..."
-                    test -d database
-                    ls -la database
+                    test -d "$WORKSPACE/database"
+                    ls -ld "$WORKSPACE/database"
+                    ls -la "$WORKSPACE/database"
 
-                    echo "Checking Docker Compose file..."
-                    test -f docker-compose.yml
+                    echo ""
+                    echo "Checking docker-compose.yml..."
+                    test -f "$WORKSPACE/docker-compose.yml"
+                    ls -l "$WORKSPACE/docker-compose.yml"
 
+                    echo ""
                     echo "Checking Jenkinsfile..."
-                    test -f Jenkinsfile
+                    test -f "$WORKSPACE/Jenkinsfile"
+                    ls -l "$WORKSPACE/Jenkinsfile"
 
+                    echo ""
                     echo "Project structure verified successfully."
                 '''
             }
@@ -83,7 +110,9 @@ pipeline {
 
             steps {
 
+                echo '======================================'
                 echo 'Validating Docker Compose configuration...'
+                echo '======================================'
 
                 sh '''
                     docker compose config
@@ -131,23 +160,27 @@ pipeline {
 
                         echo "Creating Docker secret files..."
 
-                        mkdir -p secrets
+                        mkdir -p "$WORKSPACE/secrets"
 
                         printf '%s' "$MYSQL_ROOT_PASSWORD" \
-                        > secrets/mysql_root_password
+                        > "$WORKSPACE/secrets/mysql_root_password"
 
                         printf '%s' "$MYSQL_USER" \
-                        > secrets/mysql_user
+                        > "$WORKSPACE/secrets/mysql_user"
 
                         printf '%s' "$MYSQL_PASSWORD" \
-                        > secrets/mysql_password
+                        > "$WORKSPACE/secrets/mysql_password"
 
                         printf '%s' "$MYSQL_DATABASE" \
-                        > secrets/mysql_database
+                        > "$WORKSPACE/secrets/mysql_database"
 
-                        chmod 600 secrets/*
+                        chmod 600 "$WORKSPACE/secrets"/*
 
                         echo "Docker secret files created successfully."
+
+                        echo ""
+                        echo "Secret files:"
+                        ls -la "$WORKSPACE/secrets"
                     '''
                 }
             }
@@ -161,14 +194,20 @@ pipeline {
 
             steps {
 
+                echo '======================================'
                 echo 'Building Docker images...'
+                echo '======================================'
 
                 sh '''
                     echo "Checking frontend before Docker build..."
-                    ls -la frontend
+                    ls -la "$WORKSPACE/frontend"
 
+                    echo ""
                     echo "Checking API before Docker build..."
-                    ls -la api
+                    ls -la "$WORKSPACE/api"
+
+                    echo ""
+                    echo "Building Docker images..."
 
                     docker compose build
                 '''
@@ -183,7 +222,9 @@ pipeline {
 
             steps {
 
+                echo '======================================'
                 echo 'Starting Docker containers...'
+                echo '======================================'
 
                 sh '''
                     docker compose up -d
@@ -199,7 +240,9 @@ pipeline {
 
             steps {
 
+                echo '======================================'
                 echo 'Checking Docker containers...'
+                echo '======================================'
 
                 sh '''
                     docker compose ps
@@ -215,12 +258,20 @@ pipeline {
 
             steps {
 
+                echo '======================================'
                 echo 'Checking API health...'
+                echo '======================================'
 
                 sh '''
+                    echo "Waiting for application to start..."
                     sleep 15
 
+                    echo "Checking API health..."
+
                     curl -f http://localhost:5000/health
+
+                    echo ""
+                    echo "API health check successful."
                 '''
             }
         }
@@ -236,9 +287,7 @@ pipeline {
         success {
 
             echo '======================================'
-
             echo 'Docker application deployed successfully!'
-
             echo '======================================'
 
         }
@@ -246,9 +295,7 @@ pipeline {
         failure {
 
             echo '======================================'
-
             echo 'Docker deployment failed!'
-
             echo '======================================'
 
         }
