@@ -1,65 +1,32 @@
 pipeline {
 
-    /*
-     * Use a separate workspace for every build.
-     * This prevents another Jenkins job/build from
-     * deleting or modifying our workspace.
-     */
-    agent {
-        node {
-            customWorkspace "/var/lib/jenkins/workspace/docker-project-${BUILD_NUMBER}"
-        }
-    }
+    agent any
 
     options {
 
-        /*
-         * Do not perform Jenkins automatic checkout.
-         * We checkout manually below.
-         */
+        // Prevent Jenkins from automatically checking out the repository
         skipDefaultCheckout(true)
 
-        /*
-         * Prevent two builds of this job from running together.
-         */
+        // Prevent two builds of this job from running at the same time
         disableConcurrentBuilds()
     }
 
     stages {
 
         /*
-         * 1. Checkout source code
+         * 1. Checkout
          */
         stage('Checkout') {
 
             steps {
 
                 echo '======================================'
-                echo 'WORKSPACE'
-                echo '======================================'
-
-                sh '''
-                    echo "Workspace:"
-                    pwd
-
-                    echo ""
-                    echo "Build number:"
-                    echo "$BUILD_NUMBER"
-
-                    echo ""
-                    echo "Workspace path:"
-                    echo "$WORKSPACE"
-                '''
-
-                echo '======================================'
-                echo 'Cleaning workspace'
+                echo 'Cleaning Jenkins workspace'
                 echo '======================================'
 
                 deleteDir()
 
-                echo '======================================'
-                echo 'Checking out Git repository'
-                echo '======================================'
+                echo 'Checking out code from GitHub...'
 
                 checkout scm
 
@@ -67,44 +34,41 @@ pipeline {
                     set -e
 
                     echo "======================================"
-                    echo "GIT COMMIT"
+                    echo "CURRENT WORKSPACE"
                     echo "======================================"
 
+                    pwd
+
+                    echo ""
+                    echo "Build Number:"
+                    echo "$BUILD_NUMBER"
+
+                    echo ""
+                    echo "Git Commit:"
                     git rev-parse --short HEAD
 
-                    echo "======================================"
-                    echo "REPOSITORY CONTENTS"
-                    echo "======================================"
-
+                    echo ""
+                    echo "Repository Contents:"
                     ls -la
 
-                    echo "======================================"
-                    echo "FRONTEND"
-                    echo "======================================"
-
+                    echo ""
+                    echo "Frontend Directory:"
                     ls -la ./frontend
 
-                    echo "======================================"
-                    echo "API"
-                    echo "======================================"
-
+                    echo ""
+                    echo "API Directory:"
                     ls -la ./api
 
-                    echo "======================================"
-                    echo "DATABASE"
-                    echo "======================================"
-
+                    echo ""
+                    echo "Database Directory:"
                     ls -la ./database
 
-                    echo "======================================"
-                    echo "DOCKER COMPOSE"
-                    echo "======================================"
-
+                    echo ""
+                    echo "Docker Compose:"
                     ls -l ./docker-compose.yml
 
-                    echo "======================================"
-                    echo "CHECKOUT SUCCESSFUL"
-                    echo "======================================"
+                    echo ""
+                    echo "Checkout completed successfully."
                 '''
             }
         }
@@ -166,23 +130,25 @@ pipeline {
                     sh '''
                         set +x
 
+                        echo "Creating Docker secret files..."
+
                         mkdir -p secrets
 
                         printf '%s' "$MYSQL_ROOT_PASSWORD" \
-                            > secrets/mysql_root_password
+                        > secrets/mysql_root_password
 
                         printf '%s' "$MYSQL_USER" \
-                            > secrets/mysql_user
+                        > secrets/mysql_user
 
                         printf '%s' "$MYSQL_PASSWORD" \
-                            > secrets/mysql_password
+                        > secrets/mysql_password
 
                         printf '%s' "$MYSQL_DATABASE" \
-                            > secrets/mysql_database
+                        > secrets/mysql_database
 
                         chmod 600 secrets/*
 
-                        echo "Docker secrets created."
+                        echo "Docker secret files created successfully."
 
                         ls -la secrets
                     '''
@@ -205,7 +171,7 @@ pipeline {
                 sh '''
                     set -e
 
-                    echo "Workspace:"
+                    echo "Current workspace:"
                     pwd
 
                     echo ""
@@ -217,7 +183,7 @@ pipeline {
                     ls -la ./api
 
                     echo ""
-                    echo "Building images..."
+                    echo "Building Docker images..."
 
                     docker compose build
                 '''
@@ -226,14 +192,14 @@ pipeline {
 
 
         /*
-         * 5. Deploy application
+         * 5. Deploy Docker Application
          */
         stage('Deploy Docker Application') {
 
             steps {
 
                 echo '======================================'
-                echo 'Deploying Docker Application'
+                echo 'Starting Docker containers'
                 echo '======================================'
 
                 sh '''
@@ -244,14 +210,14 @@ pipeline {
 
 
         /*
-         * 6. Verify containers
+         * 6. Verify Containers
          */
         stage('Verify Containers') {
 
             steps {
 
                 echo '======================================'
-                echo 'Verifying Containers'
+                echo 'Checking Docker containers'
                 echo '======================================'
 
                 sh '''
@@ -273,7 +239,8 @@ pipeline {
                 echo '======================================'
 
                 sh '''
-                    echo "Waiting for application..."
+                    echo "Waiting for application to start..."
+
                     sleep 15
 
                     echo "Checking API health..."
@@ -281,6 +248,7 @@ pipeline {
                     curl -f http://localhost:5000/health
 
                     echo ""
+
                     echo "API health check successful."
                 '''
             }
