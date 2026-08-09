@@ -3,25 +3,25 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: todo-frontend
+    container_name: dockerApp-frontend
     ports:
       - "8080:80"
     depends_on:
       - api
     networks:
-      - todo-network
+      - dockerApp-network
     restart: always
 
   api:
     build:
       context: ./api
-    container_name: todo-api
+    container_name: dockerApp-api
     ports:
       - "5000:5000"
     depends_on:
       - mysql
     networks:
-      - todo-network
+      - dockerApp-network
     secrets:
       - mysql_user
       - mysql_password
@@ -36,9 +36,9 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: todo-mysql
+    container_name: dockerApp-mysql
     networks:
-      - todo-network
+      - dockerApp-network
     secrets:
       - mysql_root_password
       - mysql_user
@@ -55,7 +55,7 @@ services:
 
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: todo-phpmyadmin
+    container_name: dockerApp-phpmyadmin
     ports:
       - "8081:80"
     depends_on:
@@ -64,13 +64,13 @@ services:
       PMA_HOST: mysql
       PMA_PORT: 3306
     networks:
-      - todo-network
+      - dockerApp-network
     restart: always
 
 
 networks:
 
-  todo-network:
+  dockerApp-network:
     driver: bridge
     ipam:
       config:
