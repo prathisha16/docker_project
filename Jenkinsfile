@@ -5,21 +5,79 @@ pipeline {
     stages {
 
         /*
-         * 1. Get latest code from GitHub
+         * 1. Clean workspace and get latest code from GitHub
          */
         stage('Checkout') {
 
             steps {
 
+                echo 'Cleaning Jenkins workspace...'
+
+                deleteDir()
+
                 echo 'Checking out code from GitHub...'
 
                 checkout scm
+
+                echo 'Checking repository contents...'
+
+                sh '''
+                    echo "======================================"
+                    echo "Current workspace:"
+                    pwd
+
+                    echo "======================================"
+                    echo "Git commit:"
+                    git rev-parse --short HEAD
+
+                    echo "======================================"
+                    echo "Git branch:"
+                    git branch --show-current
+
+                    echo "======================================"
+                    echo "Repository contents:"
+                    ls -la
+                '''
             }
         }
 
 
         /*
-         * 2. Validate Docker Compose file
+         * 2. Verify required project directories
+         */
+        stage('Verify Project Structure') {
+
+            steps {
+
+                echo 'Verifying project structure...'
+
+                sh '''
+                    echo "Checking frontend directory..."
+                    test -d frontend
+                    ls -la frontend
+
+                    echo "Checking API directory..."
+                    test -d api
+                    ls -la api
+
+                    echo "Checking database directory..."
+                    test -d database
+                    ls -la database
+
+                    echo "Checking Docker Compose file..."
+                    test -f docker-compose.yml
+
+                    echo "Checking Jenkinsfile..."
+                    test -f Jenkinsfile
+
+                    echo "Project structure verified successfully."
+                '''
+            }
+        }
+
+
+        /*
+         * 3. Validate Docker Compose file
          */
         stage('Validate Docker Compose') {
 
@@ -35,7 +93,7 @@ pipeline {
 
 
         /*
-         * 3. Create Docker secrets
+         * 4. Create Docker secrets
          *
          * Secrets are stored in Jenkins Credentials.
          * They are NOT stored in GitHub.
@@ -88,6 +146,8 @@ pipeline {
                         > secrets/mysql_database
 
                         chmod 600 secrets/*
+
+                        echo "Docker secret files created successfully."
                     '''
                 }
             }
@@ -95,7 +155,7 @@ pipeline {
 
 
         /*
-         * 4. Build Docker images
+         * 5. Build Docker images
          */
         stage('Build Docker Images') {
 
@@ -104,6 +164,12 @@ pipeline {
                 echo 'Building Docker images...'
 
                 sh '''
+                    echo "Checking frontend before Docker build..."
+                    ls -la frontend
+
+                    echo "Checking API before Docker build..."
+                    ls -la api
+
                     docker compose build
                 '''
             }
@@ -111,7 +177,7 @@ pipeline {
 
 
         /*
-         * 5. Deploy application
+         * 6. Deploy application
          */
         stage('Deploy Docker Application') {
 
@@ -127,7 +193,7 @@ pipeline {
 
 
         /*
-         * 6. Check running containers
+         * 7. Check running containers
          */
         stage('Verify Containers') {
 
@@ -143,7 +209,7 @@ pipeline {
 
 
         /*
-         * 7. Check API health
+         * 8. Check API health
          */
         stage('Health Check') {
 
