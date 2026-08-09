@@ -12,6 +12,90 @@
 
 
     <style>
+        <script>
+
+async function addDocker() {
+
+    const input = document.getElementById("dockerInput");
+    const status = document.getElementById("status");
+
+    const docker = input.value.trim();
+
+    if (!docker) {
+        status.textContent = "Please enter a Docker topic";
+        return;
+    }
+
+    try {
+
+        const response = await fetch("http://YOUR_EC2_PUBLIC_IP:5000/topics", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                docker: docker
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Unable to add Docker topic");
+        }
+
+        status.textContent = "Docker topic added successfully";
+
+        input.value = "";
+
+        loadDockerTopics();
+
+    } catch (error) {
+
+        console.error(error);
+
+        status.textContent = "Unable to add Docker topic";
+    }
+}
+
+
+async function loadDockerTopics() {
+
+    try {
+
+        const response = await fetch(
+            "http://YOUR_EC2_PUBLIC_IP:5000/topics"
+        );
+
+        const topics = await response.json();
+
+        const list = document.getElementById("dockerList");
+
+        list.innerHTML = "";
+
+        topics.forEach(topic => {
+
+            const li = document.createElement("li");
+
+            li.textContent = topic.docker;
+
+            list.appendChild(li);
+
+        });
+
+    } catch (error) {
+
+        console.error("Unable to load topics:", error);
+
+    }
+}
+
+
+window.addEventListener("load", loadDockerTopics);
+
+</script>
 
         body {
 
