@@ -2,18 +2,23 @@ pipeline {
 
     agent any
 
-    /*
-     * Prevent Jenkins from automatically checking out the repository.
-     * We will perform the checkout ourselves.
-     */
     options {
+        /*
+         * Prevent Jenkins from automatically checking out SCM.
+         */
         skipDefaultCheckout(true)
+
+        /*
+         * Prevent two builds from using the same workspace
+         * at the same time.
+         */
+        disableConcurrentBuilds()
     }
 
     stages {
 
         /*
-         * 1. Clean workspace and checkout code
+         * 1. Checkout
          */
         stage('Checkout') {
 
@@ -57,117 +62,45 @@ pipeline {
                     ls -la
 
                     echo "======================================"
-                    echo "FRONTEND DETAILS"
+                    echo "FRONTEND DIRECTORY"
                     echo "======================================"
 
-                    ls -lad frontend || true
+                    ls -la frontend
 
                     echo "======================================"
-                    echo "FRONTEND STAT"
+                    echo "API DIRECTORY"
                     echo "======================================"
 
-                    stat frontend || true
+                    ls -la api
 
                     echo "======================================"
-                    echo "SEARCHING FOR FRONTEND"
+                    echo "DATABASE DIRECTORY"
                     echo "======================================"
 
-                    find . -maxdepth 3 -name "frontend" -print
+                    ls -la database
 
                     echo "======================================"
-                    echo "GIT TREE"
+                    echo "DOCKER COMPOSE FILE"
                     echo "======================================"
 
-                    git ls-tree HEAD
+                    ls -l docker-compose.yml
 
                     echo "======================================"
-                    echo "GIT FRONTEND TREE"
+                    echo "GIT FRONTEND"
                     echo "======================================"
 
-                    git ls-tree HEAD frontend || true
+                    git ls-tree HEAD frontend
 
                     echo "======================================"
-                    echo "GIT STATUS"
+                    echo "CHECKOUT SUCCESSFUL"
                     echo "======================================"
-
-                    git status --short
                 '''
             }
         }
 
 
         /*
-         * 2. Verify project files
-         */
-        stage('Verify Project Structure') {
-
-            steps {
-
-                echo '======================================'
-                echo 'Verifying project structure'
-                echo '======================================'
-
-                sh '''
-                    set -e
-
-                    echo "Workspace:"
-                    pwd
-
-                    echo ""
-                    echo "Checking frontend..."
-
-                    if [ -d "./frontend" ]; then
-                        echo "Frontend directory exists."
-                        ls -la ./frontend
-                    else
-                        echo "ERROR: frontend directory does not exist."
-                        echo "Current directory contents:"
-                        ls -la
-                        exit 1
-                    fi
-
-                    echo ""
-                    echo "Checking API..."
-
-                    if [ -d "./api" ]; then
-                        echo "API directory exists."
-                        ls -la ./api
-                    else
-                        echo "ERROR: api directory does not exist."
-                        exit 1
-                    fi
-
-                    echo ""
-                    echo "Checking database..."
-
-                    if [ -d "./database" ]; then
-                        echo "Database directory exists."
-                        ls -la ./database
-                    else
-                        echo "ERROR: database directory does not exist."
-                        exit 1
-                    fi
-
-                    echo ""
-                    echo "Checking docker-compose.yml..."
-
-                    if [ -f "./docker-compose.yml" ]; then
-                        echo "docker-compose.yml exists."
-                        ls -l ./docker-compose.yml
-                    else
-                        echo "ERROR: docker-compose.yml does not exist."
-                        exit 1
-                    fi
-
-                    echo ""
-                    echo "Project structure verified successfully."
-                '''
-            }
-        }
-
-
-        /*
-         * 3. Validate Docker Compose
+         * 2. Validate Docker Compose
          */
         stage('Validate Docker Compose') {
 
@@ -185,7 +118,7 @@ pipeline {
 
 
         /*
-         * 4. Create Docker secrets
+         * 3. Create Docker Secrets
          */
         stage('Create Docker Secrets') {
 
@@ -238,7 +171,7 @@ pipeline {
 
                         chmod 600 secrets/*
 
-                        echo "Docker secret files created."
+                        echo "Docker secret files created successfully."
 
                         ls -la secrets
                     '''
@@ -248,7 +181,7 @@ pipeline {
 
 
         /*
-         * 5. Build Docker images
+         * 4. Build Docker Images
          */
         stage('Build Docker Images') {
 
@@ -266,14 +199,14 @@ pipeline {
 
                     echo ""
                     echo "Frontend:"
-                    ls -la ./frontend
+                    ls -la frontend
 
                     echo ""
                     echo "API:"
-                    ls -la ./api
+                    ls -la api
 
                     echo ""
-                    echo "Docker Compose build:"
+                    echo "Building Docker images..."
 
                     docker compose build
                 '''
@@ -282,7 +215,7 @@ pipeline {
 
 
         /*
-         * 6. Deploy application
+         * 5. Deploy application
          */
         stage('Deploy Docker Application') {
 
@@ -300,7 +233,7 @@ pipeline {
 
 
         /*
-         * 7. Verify containers
+         * 6. Verify containers
          */
         stage('Verify Containers') {
 
@@ -318,7 +251,7 @@ pipeline {
 
 
         /*
-         * 8. Health check
+         * 7. Health Check
          */
         stage('Health Check') {
 
