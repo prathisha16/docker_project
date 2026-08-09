@@ -3,12 +3,12 @@ pipeline {
     agent any
 
     options {
-
-        // Prevent Jenkins from automatically checking out the repository
         skipDefaultCheckout(true)
-
-        // Prevent two builds of this job from running at the same time
         disableConcurrentBuilds()
+    }
+
+    environment {
+        BUILD_WS = "/var/lib/jenkins/workspace/docker-project-${BUILD_NUMBER}"
     }
 
     stages {
@@ -17,59 +17,66 @@ pipeline {
          * 1. Checkout
          */
         stage('Checkout') {
-
             steps {
 
-                echo '======================================'
-                echo 'Cleaning Jenkins workspace'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                deleteDir()
+                    echo '======================================'
+                    echo 'Using isolated workspace'
+                    echo '======================================'
 
-                echo 'Checking out code from GitHub...'
+                    echo "Workspace: ${env.BUILD_WS}"
 
-                checkout scm
+                    deleteDir()
 
-                sh '''
-                    set -e
+                    echo 'Checking out source code...'
 
-                    echo "======================================"
-                    echo "CURRENT WORKSPACE"
-                    echo "======================================"
+                    checkout scm
 
-                    pwd
+                    sh '''
+                        set -e
 
-                    echo ""
-                    echo "Build Number:"
-                    echo "$BUILD_NUMBER"
+                        echo "======================================"
+                        echo "GIT COMMIT"
+                        echo "======================================"
 
-                    echo ""
-                    echo "Git Commit:"
-                    git rev-parse --short HEAD
+                        git rev-parse --short HEAD
 
-                    echo ""
-                    echo "Repository Contents:"
-                    ls -la
+                        echo "======================================"
+                        echo "FILES CHECKED OUT"
+                        echo "======================================"
 
-                    echo ""
-                    echo "Frontend Directory:"
-                    ls -la ./frontend
+                        find . -maxdepth 2 -print | sort
 
-                    echo ""
-                    echo "API Directory:"
-                    ls -la ./api
+                        echo "======================================"
+                        echo "FRONTEND"
+                        echo "======================================"
 
-                    echo ""
-                    echo "Database Directory:"
-                    ls -la ./database
+                        ls -la frontend
 
-                    echo ""
-                    echo "Docker Compose:"
-                    ls -l ./docker-compose.yml
+                        echo "======================================"
+                        echo "API"
+                        echo "======================================"
 
-                    echo ""
-                    echo "Checkout completed successfully."
-                '''
+                        ls -la api
+
+                        echo "======================================"
+                        echo "DATABASE"
+                        echo "======================================"
+
+                        ls -la database
+
+                        echo "======================================"
+                        echo "DOCKER COMPOSE"
+                        echo "======================================"
+
+                        ls -l docker-compose.yml
+
+                        echo "======================================"
+                        echo "CHECKOUT SUCCESSFUL"
+                        echo "======================================"
+                    '''
+                }
             }
         }
 
@@ -78,16 +85,20 @@ pipeline {
          * 2. Validate Docker Compose
          */
         stage('Validate Docker Compose') {
-
             steps {
 
-                echo '======================================'
-                echo 'Validating Docker Compose'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                sh '''
-                    docker compose config
-                '''
+                    echo '======================================'
+                    echo 'Validating Docker Compose'
+                    echo '======================================'
+
+                    sh '''
+                        set -e
+
+                        docker compose config
+                    '''
+                }
             }
         }
 
@@ -96,62 +107,62 @@ pipeline {
          * 3. Create Docker Secrets
          */
         stage('Create Docker Secrets') {
-
             steps {
 
-                echo '======================================'
-                echo 'Creating Docker Secrets'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                withCredentials([
+                    withCredentials([
 
-                    string(
-                        credentialsId: 'mysql-root-password',
-                        variable: 'MYSQL_ROOT_PASSWORD'
-                    ),
+                        string(
+                            credentialsId: 'mysql-root-password',
+                            variable: 'MYSQL_ROOT_PASSWORD'
+                        ),
 
-                    string(
-                        credentialsId: 'mysql-user',
-                        variable: 'MYSQL_USER'
-                    ),
+                        string(
+                            credentialsId: 'mysql-user',
+                            variable: 'MYSQL_USER'
+                        ),
 
-                    string(
-                        credentialsId: 'mysql-password',
-                        variable: 'MYSQL_PASSWORD'
-                    ),
+                        string(
+                            credentialsId: 'mysql-password',
+                            variable: 'MYSQL_PASSWORD'
+                        ),
 
-                    string(
-                        credentialsId: 'mysql-database',
-                        variable: 'MYSQL_DATABASE'
-                    )
+                        string(
+                            credentialsId: 'mysql-database',
+                            variable: 'MYSQL_DATABASE'
+                        )
 
-                ]) {
+                    ]) {
 
-                    sh '''
-                        set +x
+                        sh '''
+                            set +x
 
-                        echo "Creating Docker secret files..."
+                            echo "======================================"
+                            echo "Creating Docker secrets"
+                            echo "======================================"
 
-                        mkdir -p secrets
+                            mkdir -p secrets
 
-                        printf '%s' "$MYSQL_ROOT_PASSWORD" \
-                        > secrets/mysql_root_password
+                            printf '%s' "$MYSQL_ROOT_PASSWORD" \
+                                > secrets/mysql_root_password
 
-                        printf '%s' "$MYSQL_USER" \
-                        > secrets/mysql_user
+                            printf '%s' "$MYSQL_USER" \
+                                > secrets/mysql_user
 
-                        printf '%s' "$MYSQL_PASSWORD" \
-                        > secrets/mysql_password
+                            printf '%s' "$MYSQL_PASSWORD" \
+                                > secrets/mysql_password
 
-                        printf '%s' "$MYSQL_DATABASE" \
-                        > secrets/mysql_database
+                            printf '%s' "$MYSQL_DATABASE" \
+                                > secrets/mysql_database
 
-                        chmod 600 secrets/*
+                            chmod 600 secrets/*
 
-                        echo "Docker secret files created successfully."
+                            echo "Docker secrets created successfully."
 
-                        ls -la secrets
-                    '''
+                            ls -la secrets
+                        '''
+                    }
                 }
             }
         }
@@ -161,32 +172,34 @@ pipeline {
          * 4. Build Docker Images
          */
         stage('Build Docker Images') {
-
             steps {
 
-                echo '======================================'
-                echo 'Building Docker Images'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                sh '''
-                    set -e
+                    echo '======================================'
+                    echo 'Building Docker Images'
+                    echo '======================================'
 
-                    echo "Current workspace:"
-                    pwd
+                    sh '''
+                        set -e
 
-                    echo ""
-                    echo "Frontend:"
-                    ls -la ./frontend
+                        echo "Workspace:"
+                        pwd
 
-                    echo ""
-                    echo "API:"
-                    ls -la ./api
+                        echo ""
+                        echo "Frontend:"
+                        ls -la frontend
 
-                    echo ""
-                    echo "Building Docker images..."
+                        echo ""
+                        echo "API:"
+                        ls -la api
 
-                    docker compose build
-                '''
+                        echo ""
+                        echo "Building Docker images..."
+
+                        docker compose build
+                    '''
+                }
             }
         }
 
@@ -195,16 +208,20 @@ pipeline {
          * 5. Deploy Docker Application
          */
         stage('Deploy Docker Application') {
-
             steps {
 
-                echo '======================================'
-                echo 'Starting Docker containers'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                sh '''
-                    docker compose up -d
-                '''
+                    echo '======================================'
+                    echo 'Deploying Docker Application'
+                    echo '======================================'
+
+                    sh '''
+                        set -e
+
+                        docker compose up -d
+                    '''
+                }
             }
         }
 
@@ -213,16 +230,20 @@ pipeline {
          * 6. Verify Containers
          */
         stage('Verify Containers') {
-
             steps {
 
-                echo '======================================'
-                echo 'Checking Docker containers'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                sh '''
-                    docker compose ps
-                '''
+                    echo '======================================'
+                    echo 'Verifying Docker Containers'
+                    echo '======================================'
+
+                    sh '''
+                        set -e
+
+                        docker compose ps
+                    '''
+                }
             }
         }
 
@@ -231,26 +252,28 @@ pipeline {
          * 7. Health Check
          */
         stage('Health Check') {
-
             steps {
 
-                echo '======================================'
-                echo 'Checking API Health'
-                echo '======================================'
+                ws("${env.BUILD_WS}") {
 
-                sh '''
-                    echo "Waiting for application to start..."
+                    echo '======================================'
+                    echo 'Checking API Health'
+                    echo '======================================'
 
-                    sleep 15
+                    sh '''
+                        set -e
 
-                    echo "Checking API health..."
+                        echo "Waiting for application..."
+                        sleep 15
 
-                    curl -f http://localhost:5000/health
+                        echo "Checking API health..."
 
-                    echo ""
+                        curl -f http://localhost:5000/health
 
-                    echo "API health check successful."
-                '''
+                        echo ""
+                        echo "API health check successful."
+                    '''
+                }
             }
         }
     }
@@ -262,23 +285,20 @@ pipeline {
     post {
 
         success {
-
             echo '======================================'
             echo 'Docker application deployed successfully!'
             echo '======================================'
         }
 
         failure {
-
             echo '======================================'
             echo 'Docker deployment failed!'
             echo '======================================'
         }
 
         always {
-
             echo '======================================'
-            echo 'Pipeline completed'
+            echo "Pipeline completed - Build ${env.BUILD_NUMBER}"
             echo '======================================'
         }
     }
