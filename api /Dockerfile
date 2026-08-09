@@ -10,4 +10,4 @@ COPY server.js .
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
