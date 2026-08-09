@@ -1,1 +1,98 @@
+services:
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: todo-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - todo-network
+    restart: always
+
+  api:
+    build:
+      context: ./api
+    container_name: todo-api
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+    networks:
+      - todo-network
+    secrets:
+      - mysql_user
+      - mysql_password
+      - mysql_database
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER_FILE: /run/secrets/mysql_user
+      DB_PASSWORD_FILE: /run/secrets/mysql_password
+      DB_NAME_FILE: /run/secrets/mysql_database
+    restart: always
+
+  mysql:
+    image: mysql:8.0
+    container_name: todo-mysql
+    networks:
+      - todo-network
+    secrets:
+      - mysql_root_password
+      - mysql_user
+      - mysql_password
+      - mysql_database
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_USER_FILE: /run/secrets/mysql_user
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+      MYSQL_DATABASE_FILE: /run/secrets/mysql_database
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: todo-phpmyadmin
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    networks:
+      - todo-network
+    restart: always
+
+
+networks:
+
+  todo-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+
+volumes:
+
+  mysql_data:
+    driver: local
+
+
+secrets:
+
+  mysql_root_password:
+    file: ./secrets/mysql_root_password
+
+  mysql_user:
+    file: ./secrets/mysql_user
+
+  mysql_password:
+    file: ./secrets/mysql_password
+
+  mysql_database:
+    file: ./secrets/mysql_database
