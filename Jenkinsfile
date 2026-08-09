@@ -2,6 +2,14 @@ pipeline {
 
     agent any
 
+    /*
+     * Disable Jenkins automatic checkout.
+     * We will perform one clean checkout ourselves.
+     */
+    options {
+        skipDefaultCheckout(true)
+    }
+
     stages {
 
         /*
@@ -22,96 +30,50 @@ pipeline {
                 checkout scm
 
                 echo '======================================'
-                echo 'Checking repository contents...'
+                echo 'Repository information'
                 echo '======================================'
 
                 sh '''
-                    echo "Current workspace:"
+                    echo "Workspace:"
                     pwd
-
-                    echo ""
-                    echo "Workspace variable:"
-                    echo "$WORKSPACE"
 
                     echo ""
                     echo "Git commit:"
                     git rev-parse --short HEAD
 
                     echo ""
-                    echo "Git branch:"
-                    git branch --show-current
-
-                    echo ""
                     echo "Repository contents:"
                     ls -la
+
+                    echo ""
+                    echo "Frontend directory:"
+                    ls -la frontend
+
+                    echo ""
+                    echo "API directory:"
+                    ls -la api
+
+                    echo ""
+                    echo "Database directory:"
+                    ls -la database
+
+                    echo ""
+                    echo "Docker Compose file:"
+                    ls -l docker-compose.yml
                 '''
             }
         }
 
 
         /*
-         * 2. Verify project structure
-         */
-        stage('Verify Project Structure') {
-
-            steps {
-
-                echo '======================================'
-                echo 'Verifying project structure...'
-                echo '======================================'
-
-                sh '''
-                    echo "Current directory:"
-                    pwd
-
-                    echo ""
-                    echo "Workspace:"
-                    echo "$WORKSPACE"
-
-                    echo ""
-                    echo "Checking frontend directory..."
-                    test -d "$WORKSPACE/frontend"
-                    ls -ld "$WORKSPACE/frontend"
-                    ls -la "$WORKSPACE/frontend"
-
-                    echo ""
-                    echo "Checking API directory..."
-                    test -d "$WORKSPACE/api"
-                    ls -ld "$WORKSPACE/api"
-                    ls -la "$WORKSPACE/api"
-
-                    echo ""
-                    echo "Checking database directory..."
-                    test -d "$WORKSPACE/database"
-                    ls -ld "$WORKSPACE/database"
-                    ls -la "$WORKSPACE/database"
-
-                    echo ""
-                    echo "Checking docker-compose.yml..."
-                    test -f "$WORKSPACE/docker-compose.yml"
-                    ls -l "$WORKSPACE/docker-compose.yml"
-
-                    echo ""
-                    echo "Checking Jenkinsfile..."
-                    test -f "$WORKSPACE/Jenkinsfile"
-                    ls -l "$WORKSPACE/Jenkinsfile"
-
-                    echo ""
-                    echo "Project structure verified successfully."
-                '''
-            }
-        }
-
-
-        /*
-         * 3. Validate Docker Compose file
+         * 2. Validate Docker Compose
          */
         stage('Validate Docker Compose') {
 
             steps {
 
                 echo '======================================'
-                echo 'Validating Docker Compose configuration...'
+                echo 'Validating Docker Compose configuration'
                 echo '======================================'
 
                 sh '''
@@ -122,10 +84,10 @@ pipeline {
 
 
         /*
-         * 4. Create Docker secrets
+         * 3. Create Docker Secrets
          *
-         * Secrets are stored in Jenkins Credentials.
-         * They are NOT stored in GitHub.
+         * Secrets come from Jenkins Credentials.
+         * They are not stored in GitHub.
          */
         stage('Create Docker Secrets') {
 
@@ -160,27 +122,27 @@ pipeline {
 
                         echo "Creating Docker secret files..."
 
-                        mkdir -p "$WORKSPACE/secrets"
+                        mkdir -p secrets
 
                         printf '%s' "$MYSQL_ROOT_PASSWORD" \
-                        > "$WORKSPACE/secrets/mysql_root_password"
+                        > secrets/mysql_root_password
 
                         printf '%s' "$MYSQL_USER" \
-                        > "$WORKSPACE/secrets/mysql_user"
+                        > secrets/mysql_user
 
                         printf '%s' "$MYSQL_PASSWORD" \
-                        > "$WORKSPACE/secrets/mysql_password"
+                        > secrets/mysql_password
 
                         printf '%s' "$MYSQL_DATABASE" \
-                        > "$WORKSPACE/secrets/mysql_database"
+                        > secrets/mysql_database
 
-                        chmod 600 "$WORKSPACE/secrets"/*
+                        chmod 600 secrets/*
 
                         echo "Docker secret files created successfully."
 
                         echo ""
                         echo "Secret files:"
-                        ls -la "$WORKSPACE/secrets"
+                        ls -la secrets
                     '''
                 }
             }
@@ -188,7 +150,7 @@ pipeline {
 
 
         /*
-         * 5. Build Docker images
+         * 4. Build Docker Images
          */
         stage('Build Docker Images') {
 
@@ -199,12 +161,16 @@ pipeline {
                 echo '======================================'
 
                 sh '''
-                    echo "Checking frontend before Docker build..."
-                    ls -la "$WORKSPACE/frontend"
+                    echo "Current workspace:"
+                    pwd
 
                     echo ""
-                    echo "Checking API before Docker build..."
-                    ls -la "$WORKSPACE/api"
+                    echo "Frontend:"
+                    ls -la frontend
+
+                    echo ""
+                    echo "API:"
+                    ls -la api
 
                     echo ""
                     echo "Building Docker images..."
@@ -216,7 +182,7 @@ pipeline {
 
 
         /*
-         * 6. Deploy application
+         * 5. Deploy application
          */
         stage('Deploy Docker Application') {
 
@@ -234,7 +200,7 @@ pipeline {
 
 
         /*
-         * 7. Check running containers
+         * 6. Verify containers
          */
         stage('Verify Containers') {
 
@@ -252,7 +218,7 @@ pipeline {
 
 
         /*
-         * 8. Check API health
+         * 7. API Health Check
          */
         stage('Health Check') {
 
@@ -264,6 +230,7 @@ pipeline {
 
                 sh '''
                     echo "Waiting for application to start..."
+
                     sleep 15
 
                     echo "Checking API health..."
