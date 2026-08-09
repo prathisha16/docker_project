@@ -41,16 +41,20 @@ services:
       MYSQL_DATABASE_FILE: /run/secrets/mysql_database
       MYSQL_USER_FILE: /run/secrets/mysql_user
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+
     secrets:
       - mysql_root_password
       - mysql_user
       - mysql_password
       - mysql_database
+
     volumes:
       - docker_data:/var/lib/mysql
       - "./database /init.sql:/docker-entrypoint-initdb.d/init.sql:ro"
+
     networks:
       - docker-network
+
     healthcheck:
       test:
         [
@@ -66,6 +70,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
     restart: always
 
   phpmyadmin:
@@ -83,18 +88,18 @@ services:
       - docker-network
     restart: always
 
+
 networks:
 
   docker-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
+
 
 volumes:
 
   docker_data:
     driver: local
+
 
 secrets:
 
