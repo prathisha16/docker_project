@@ -14,9 +14,10 @@ pipeline {
     stages {
 
         /*
-         * 1. Checkout
+         * 1. Checkout source code
          */
         stage('Checkout') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -43,7 +44,7 @@ pipeline {
                         git rev-parse --short HEAD
 
                         echo "======================================"
-                        echo "FILES CHECKED OUT"
+                        echo "REPOSITORY CONTENTS"
                         echo "======================================"
 
                         find . -maxdepth 2 -print | sort
@@ -91,6 +92,7 @@ pipeline {
          * 2. Validate Docker Compose
          */
         stage('Validate Docker Compose') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -113,6 +115,7 @@ pipeline {
          * 3. Create Docker Secrets
          */
         stage('Create Docker Secrets') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -145,30 +148,40 @@ pipeline {
                             set +x
 
                             echo "======================================"
-                            echo "Creating Docker secrets"
+                            echo "Creating Docker Secrets"
                             echo "======================================"
 
-                            /*
-                             * IMPORTANT:
-                             * The directory name is "secrets "
-                             * with a trailing space.
-                             */
+                            echo "Checking secrets directory..."
 
-                            printf '%s' "$MYSQL_ROOT_PASSWORD" \
-                                > "secrets /mysql_root_password"
+                            ls -lad "secrets "
 
-                            printf '%s' "$MYSQL_USER" \
-                                > "secrets /mysql_user"
+                            echo "Creating mysql_root_password..."
 
-                            printf '%s' "$MYSQL_PASSWORD" \
-                                > "secrets /mysql_password"
+                            printf "%s" "$MYSQL_ROOT_PASSWORD" > "secrets /mysql_root_password"
 
-                            printf '%s' "$MYSQL_DATABASE" \
-                                > "secrets /mysql_database"
+                            echo "Creating mysql_user..."
 
-                            chmod 600 "secrets "/*
+                            printf "%s" "$MYSQL_USER" > "secrets /mysql_user"
 
-                            echo "Docker secret files created successfully."
+                            echo "Creating mysql_password..."
+
+                            printf "%s" "$MYSQL_PASSWORD" > "secrets /mysql_password"
+
+                            echo "Creating mysql_database..."
+
+                            printf "%s" "$MYSQL_DATABASE" > "secrets /mysql_database"
+
+                            chmod 600 "secrets /mysql_root_password"
+
+                            chmod 600 "secrets /mysql_user"
+
+                            chmod 600 "secrets /mysql_password"
+
+                            chmod 600 "secrets /mysql_database"
+
+                            echo "======================================"
+                            echo "Docker secrets created successfully"
+                            echo "======================================"
 
                             ls -la "secrets "
                         '''
@@ -182,6 +195,7 @@ pipeline {
          * 4. Build Docker Images
          */
         stage('Build Docker Images') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -193,27 +207,36 @@ pipeline {
                     sh '''
                         set -e
 
-                        echo "Workspace:"
+                        echo "Current workspace:"
                         pwd
 
-                        echo ""
-                        echo "Frontend:"
+                        echo "======================================"
+                        echo "FRONTEND"
+                        echo "======================================"
+
                         ls -la "frontend "
 
-                        echo ""
-                        echo "API:"
+                        echo "======================================"
+                        echo "API"
+                        echo "======================================"
+
                         ls -la "api "
 
-                        echo ""
-                        echo "Database:"
+                        echo "======================================"
+                        echo "DATABASE"
+                        echo "======================================"
+
                         ls -la "database "
 
-                        echo ""
-                        echo "Secrets:"
+                        echo "======================================"
+                        echo "SECRETS"
+                        echo "======================================"
+
                         ls -la "secrets "
 
-                        echo ""
-                        echo "Building Docker images..."
+                        echo "======================================"
+                        echo "BUILDING DOCKER IMAGES"
+                        echo "======================================"
 
                         docker compose build
                     '''
@@ -226,6 +249,7 @@ pipeline {
          * 5. Deploy Docker Application
          */
         stage('Deploy Docker Application') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -245,9 +269,10 @@ pipeline {
 
 
         /*
-         * 6. Verify Containers
+         * 6. Verify Docker Containers
          */
         stage('Verify Containers') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -270,6 +295,7 @@ pipeline {
          * 7. Health Check
          */
         stage('Health Check') {
+
             steps {
 
                 ws("${env.BUILD_WS}") {
@@ -281,7 +307,8 @@ pipeline {
                     sh '''
                         set -e
 
-                        echo "Waiting for application..."
+                        echo "Waiting for application to start..."
+
                         sleep 15
 
                         echo "Checking API health..."
@@ -289,6 +316,7 @@ pipeline {
                         curl -f http://localhost:5000/health
 
                         echo ""
+
                         echo "API health check successful."
                     '''
                 }
@@ -303,18 +331,21 @@ pipeline {
     post {
 
         success {
+
             echo '======================================'
             echo 'Docker application deployed successfully!'
             echo '======================================'
         }
 
         failure {
+
             echo '======================================'
             echo 'Docker deployment failed!'
             echo '======================================'
         }
 
         always {
+
             echo '======================================'
             echo "Pipeline completed - Build ${env.BUILD_NUMBER}"
             echo '======================================'
