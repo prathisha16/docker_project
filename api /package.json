@@ -1,0 +1,13 @@
+{
+    "name": "docker-api",
+    "version": "1.0.0",
+    "description": "Docker application API",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.21.2",
+        "mysql2": "^3.11.5"
+    }
+}
