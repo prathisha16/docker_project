@@ -10,204 +10,72 @@
 
     <title>Docker Application</title>
 
-
     <style>
-        <script>
-
-async function addDocker() {
-
-    const input = document.getElementById("dockerInput");
-    const status = document.getElementById("status");
-
-    const docker = input.value.trim();
-
-    if (!docker) {
-        status.textContent = "Please enter a Docker topic";
-        return;
-    }
-
-    try {
-
-        const response = await fetch("http://YOUR_EC2_PUBLIC_IP:5000/topics", {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                docker: docker
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || "Unable to add Docker topic");
-        }
-
-        status.textContent = "Docker topic added successfully";
-
-        input.value = "";
-
-        loadDockerTopics();
-
-    } catch (error) {
-
-        console.error(error);
-
-        status.textContent = "Unable to add Docker topic";
-    }
-}
-
-
-async function loadDockerTopics() {
-
-    try {
-
-        const response = await fetch(
-            "http://YOUR_EC2_PUBLIC_IP:5000/topics"
-        );
-
-        const topics = await response.json();
-
-        const list = document.getElementById("dockerList");
-
-        list.innerHTML = "";
-
-        topics.forEach(topic => {
-
-            const li = document.createElement("li");
-
-            li.textContent = topic.docker;
-
-            list.appendChild(li);
-
-        });
-
-    } catch (error) {
-
-        console.error("Unable to load topics:", error);
-
-    }
-}
-
-
-window.addEventListener("load", loadDockerTopics);
-
-</script>
 
         body {
-
             font-family: Arial, sans-serif;
-
             background: #f4f4f4;
-
             margin: 0;
-
             padding: 0;
-
         }
-
 
         .container {
-
             width: 600px;
-
             margin: 60px auto;
-
             background: white;
-
             padding: 30px;
-
             border-radius: 10px;
-
             box-shadow: 0 0 10px #ccc;
-
         }
-
 
         h1 {
-
             text-align: center;
-
         }
-
 
         .input-area {
-
             display: flex;
-
             gap: 10px;
-
         }
-
 
         input {
-
             flex: 1;
-
             padding: 12px;
-
             font-size: 16px;
-
         }
-
 
         button {
-
             padding: 12px 20px;
-
             cursor: pointer;
-
             background: #007bff;
-
             color: white;
-
             border: none;
-
             border-radius: 5px;
-
         }
-
 
         button:hover {
-
             background: #0056b3;
-
         }
-
 
         ul {
-
             list-style: none;
-
             padding: 0;
-
         }
-
 
         li {
-
             background: #eee;
-
             margin: 10px 0;
-
             padding: 12px;
-
             border-radius: 5px;
-
         }
 
-
         .status {
-
             text-align: center;
-
             margin-top: 15px;
-
             color: green;
+        }
 
+        .error {
+            color: red;
         }
 
     </style>
@@ -217,237 +85,212 @@ window.addEventListener("load", loadDockerTopics);
 
 <body>
 
+    <div class="container">
 
-<div class="container">
-
-
-    <h1>Docker Application</h1>
+        <h1>Docker Application</h1>
 
 
-    <div class="input-area">
+        <div class="input-area">
 
-        <input
-            type="text"
-            id="dockerInput"
-            placeholder="Enter a Docker topic..."
-        >
+            <input
+                type="text"
+                id="dockerInput"
+                placeholder="Enter a Docker topic..."
+            >
+
+            <button onclick="addDocker()">
+                Add
+            </button>
+
+        </div>
 
 
-        <button onclick="addDocker()">
+        <div
+            class="status"
+            id="status">
+        </div>
 
-            Add
 
-        </button>
+        <ul id="dockerList"></ul>
 
     </div>
 
 
-    <div
-        class="status"
-        id="status">
-    </div>
+    <script>
+
+        /*
+         * Docker API
+         */
+        const API_URL = "http://3.84.11.241:5000";
 
 
-    <ul id="dockerList"></ul>
+        /*
+         * Add Docker topic
+         */
+        async function addDocker() {
+
+            const input = document.getElementById("dockerInput");
+            const status = document.getElementById("status");
+
+            const docker = input.value.trim();
 
 
-</div>
+            if (!docker) {
+
+                status.textContent =
+                    "Please enter a Docker topic";
+
+                status.className = "status error";
+
+                return;
+            }
 
 
-
-<script>
-
-
-/*
- * Load Docker topics
- */
-
-async function loadDocker() {
-
-    try {
-
-        const response = await fetch("/api/docker");
+            status.textContent = "Adding Docker topic...";
+            status.className = "status";
 
 
-        if (!response.ok) {
+            try {
 
-            throw new Error(
-                "API request failed"
-            );
+                const response = await fetch(
+                    `${API_URL}/topics`,
+                    {
+                        method: "POST",
 
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            docker: docker
+                        })
+                    }
+                );
+
+
+                const data = await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.error || "Unable to add Docker topic"
+                    );
+                }
+
+
+                status.textContent =
+                    "Docker topic added successfully";
+
+                status.className = "status";
+
+
+                input.value = "";
+
+
+                /*
+                 * Reload topic list
+                 */
+                loadDockerTopics();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error adding Docker topic:",
+                    error
+                );
+
+                status.textContent =
+                    "Unable to add Docker topic";
+
+                status.className = "status error";
+            }
         }
 
 
-        const dockerItems =
-            await response.json();
+        /*
+         * Load Docker topics
+         */
+        async function loadDockerTopics() {
+
+            const list =
+                document.getElementById("dockerList");
 
 
-        const list =
-            document.getElementById(
-                "dockerList"
-            );
+            try {
+
+                const response = await fetch(
+                    `${API_URL}/topics`
+                );
 
 
-        list.innerHTML = "";
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Unable to fetch topics"
+                    );
+                }
 
 
-        dockerItems.forEach(item => {
-
-            const li =
-                document.createElement("li");
+                const topics =
+                    await response.json();
 
 
-            li.innerHTML = `
-
-                <strong>${item.id}</strong>
-                - ${escapeHtml(item.docker)}
-
-            `;
+                list.innerHTML = "";
 
 
-            list.appendChild(li);
+                topics.forEach(topic => {
 
-        });
+                    const li =
+                        document.createElement("li");
 
+                    li.textContent =
+                        topic.docker;
 
-    } catch (error) {
+                    list.appendChild(li);
 
-        document.getElementById(
-            "status"
-        ).innerText =
-            "Unable to connect to API";
-
-
-        console.error(error);
-
-    }
-
-}
+                });
 
 
+            } catch (error) {
 
-/*
- * Add Docker topic
- */
+                console.error(
+                    "Error loading topics:",
+                    error
+                );
 
-async function addDocker() {
+                list.innerHTML =
+                    "<li>Unable to load Docker topics</li>";
+            }
+        }
 
 
-    const input =
-        document.getElementById(
-            "dockerInput"
+        /*
+         * Load topics when page opens
+         */
+        window.addEventListener(
+            "load",
+            loadDockerTopics
         );
 
 
-    const docker =
-        input.value.trim();
+        /*
+         * Allow Enter key to add topic
+         */
+        document
+            .getElementById("dockerInput")
+            .addEventListener("keydown", function(event) {
 
+                if (event.key === "Enter") {
 
-    if (!docker) {
-
-        alert(
-            "Please enter a Docker topic"
-        );
-
-        return;
-
-    }
-
-
-    try {
-
-
-        const response =
-            await fetch(
-                "/api/docker",
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body: JSON.stringify({
-
-                        docker: docker
-
-                    })
+                    addDocker();
 
                 }
-            );
 
+            });
 
-        if (!response.ok) {
-
-            throw new Error(
-                "Failed to add Docker topic"
-            );
-
-        }
-
-
-        input.value = "";
-
-
-        document.getElementById(
-            "status"
-        ).innerText =
-            "Docker topic added successfully";
-
-
-        loadDocker();
-
-
-    } catch (error) {
-
-
-        document.getElementById(
-            "status"
-        ).innerText =
-            "Unable to add Docker topic";
-
-
-        console.error(error);
-
-    }
-
-}
-
-
-
-/*
- * Escape HTML
- */
-
-function escapeHtml(text) {
-
-
-    const div =
-        document.createElement("div");
-
-
-    div.textContent = text;
-
-
-    return div.innerHTML;
-
-}
-
-
-
-/*
- * Load data when page opens
- */
-
-loadDocker();
-
-
-</script>
-
+    </script>
 
 </body>
 
