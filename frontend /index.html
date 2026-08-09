@@ -2,201 +2,368 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Todo Application</title>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Docker Application</title>
+
 
     <style>
+
         body {
+
             font-family: Arial, sans-serif;
+
             background: #f4f4f4;
+
             margin: 0;
+
             padding: 0;
+
         }
+
 
         .container {
+
             width: 600px;
+
             margin: 60px auto;
+
             background: white;
+
             padding: 30px;
+
             border-radius: 10px;
+
             box-shadow: 0 0 10px #ccc;
+
         }
+
 
         h1 {
+
             text-align: center;
+
         }
+
 
         .input-area {
+
             display: flex;
+
             gap: 10px;
+
         }
+
 
         input {
+
             flex: 1;
+
             padding: 12px;
+
             font-size: 16px;
+
         }
+
 
         button {
+
             padding: 12px 20px;
+
             cursor: pointer;
+
             background: #007bff;
+
             color: white;
+
             border: none;
+
             border-radius: 5px;
+
         }
+
 
         button:hover {
+
             background: #0056b3;
+
         }
+
 
         ul {
+
             list-style: none;
+
             padding: 0;
+
         }
+
 
         li {
+
             background: #eee;
+
             margin: 10px 0;
+
             padding: 12px;
+
             border-radius: 5px;
+
         }
 
+
         .status {
+
             text-align: center;
+
             margin-top: 15px;
+
             color: green;
+
         }
+
     </style>
+
 </head>
+
 
 <body>
 
+
 <div class="container">
 
-    <h1>Todo Application</h1>
+
+    <h1>Docker Application</h1>
+
 
     <div class="input-area">
+
         <input
             type="text"
-            id="todoInput"
-            placeholder="Enter a todo..."
+            id="dockerInput"
+            placeholder="Enter a Docker topic..."
         >
 
-        <button onclick="addTodo()">
+
+        <button onclick="addDocker()">
+
             Add
+
         </button>
+
     </div>
 
-    <div class="status" id="status"></div>
 
-    <ul id="todoList"></ul>
+    <div
+        class="status"
+        id="status">
+    </div>
+
+
+    <ul id="dockerList"></ul>
+
 
 </div>
 
+
+
 <script>
 
-async function loadTodos() {
+
+/*
+ * Load Docker topics
+ */
+
+async function loadDocker() {
 
     try {
 
-        const response = await fetch("/api/todos");
+        const response = await fetch("/api/docker");
+
 
         if (!response.ok) {
-            throw new Error("API request failed");
+
+            throw new Error(
+                "API request failed"
+            );
+
         }
 
-        const todos = await response.json();
 
-        const list = document.getElementById("todoList");
+        const dockerItems =
+            await response.json();
+
+
+        const list =
+            document.getElementById(
+                "dockerList"
+            );
+
 
         list.innerHTML = "";
 
-        todos.forEach(todo => {
 
-            const li = document.createElement("li");
+        dockerItems.forEach(item => {
+
+            const li =
+                document.createElement("li");
+
 
             li.innerHTML = `
-                <strong>${todo.id}</strong>
-                - ${escapeHtml(todo.todo)}
+
+                <strong>${item.id}</strong>
+                - ${escapeHtml(item.docker)}
+
             `;
 
+
             list.appendChild(li);
+
         });
+
 
     } catch (error) {
 
-        document.getElementById("status").innerText =
+        document.getElementById(
+            "status"
+        ).innerText =
             "Unable to connect to API";
 
+
         console.error(error);
+
     }
+
 }
 
 
-async function addTodo() {
 
-    const input = document.getElementById("todoInput");
+/*
+ * Add Docker topic
+ */
 
-    const todo = input.value.trim();
+async function addDocker() {
 
-    if (!todo) {
-        alert("Please enter a todo");
+
+    const input =
+        document.getElementById(
+            "dockerInput"
+        );
+
+
+    const docker =
+        input.value.trim();
+
+
+    if (!docker) {
+
+        alert(
+            "Please enter a Docker topic"
+        );
+
         return;
+
     }
+
 
     try {
 
-        const response = await fetch("/api/todos", {
 
-            method: "POST",
+        const response =
+            await fetch(
+                "/api/docker",
+                {
 
-            headers: {
-                "Content-Type": "application/json"
-            },
+                    method: "POST",
 
-            body: JSON.stringify({
-                todo: todo
-            })
+                    headers: {
 
-        });
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body: JSON.stringify({
+
+                        docker: docker
+
+                    })
+
+                }
+            );
+
 
         if (!response.ok) {
-            throw new Error("Failed to add todo");
+
+            throw new Error(
+                "Failed to add Docker topic"
+            );
+
         }
+
 
         input.value = "";
 
-        document.getElementById("status").innerText =
-            "Todo added successfully";
 
-        loadTodos();
+        document.getElementById(
+            "status"
+        ).innerText =
+            "Docker topic added successfully";
+
+
+        loadDocker();
+
 
     } catch (error) {
 
-        document.getElementById("status").innerText =
-            "Unable to add todo";
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "Unable to add Docker topic";
+
 
         console.error(error);
+
     }
+
 }
 
+
+
+/*
+ * Escape HTML
+ */
 
 function escapeHtml(text) {
 
-    const div = document.createElement("div");
+
+    const div =
+        document.createElement("div");
+
 
     div.textContent = text;
 
+
     return div.innerHTML;
+
 }
 
 
-loadTodos();
+
+/*
+ * Load data when page opens
+ */
+
+loadDocker();
+
 
 </script>
+
 
 </body>
 
