@@ -3,8 +3,8 @@ pipeline {
     agent any
 
     /*
-     * Disable Jenkins automatic checkout.
-     * We will perform one clean checkout ourselves.
+     * Prevent Jenkins from automatically checking out the repository.
+     * We will perform the checkout ourselves.
      */
     options {
         skipDefaultCheckout(true)
@@ -13,14 +13,14 @@ pipeline {
     stages {
 
         /*
-         * 1. Clean workspace and checkout latest code
+         * 1. Clean workspace and checkout code
          */
         stage('Checkout') {
 
             steps {
 
                 echo '======================================'
-                echo 'Cleaning Jenkins workspace...'
+                echo 'Cleaning Jenkins workspace'
                 echo '======================================'
 
                 deleteDir()
@@ -29,51 +29,152 @@ pipeline {
 
                 checkout scm
 
-                echo '======================================'
-                echo 'Repository information'
-                echo '======================================'
-
                 sh '''
-                    echo "Workspace:"
+                    set -e
+
+                    echo "======================================"
+                    echo "CURRENT DIRECTORY"
+                    echo "======================================"
+
                     pwd
 
-                    echo ""
-                    echo "Git commit:"
+                    echo "======================================"
+                    echo "WORKSPACE"
+                    echo "======================================"
+
+                    echo "$WORKSPACE"
+
+                    echo "======================================"
+                    echo "GIT COMMIT"
+                    echo "======================================"
+
                     git rev-parse --short HEAD
 
-                    echo ""
-                    echo "Repository contents:"
+                    echo "======================================"
+                    echo "REPOSITORY CONTENTS"
+                    echo "======================================"
+
                     ls -la
 
-                    echo ""
-                    echo "Frontend directory:"
-                    ls -la frontend
+                    echo "======================================"
+                    echo "FRONTEND DETAILS"
+                    echo "======================================"
 
-                    echo ""
-                    echo "API directory:"
-                    ls -la api
+                    ls -lad frontend || true
 
-                    echo ""
-                    echo "Database directory:"
-                    ls -la database
+                    echo "======================================"
+                    echo "FRONTEND STAT"
+                    echo "======================================"
 
-                    echo ""
-                    echo "Docker Compose file:"
-                    ls -l docker-compose.yml
+                    stat frontend || true
+
+                    echo "======================================"
+                    echo "SEARCHING FOR FRONTEND"
+                    echo "======================================"
+
+                    find . -maxdepth 3 -name "frontend" -print
+
+                    echo "======================================"
+                    echo "GIT TREE"
+                    echo "======================================"
+
+                    git ls-tree HEAD
+
+                    echo "======================================"
+                    echo "GIT FRONTEND TREE"
+                    echo "======================================"
+
+                    git ls-tree HEAD frontend || true
+
+                    echo "======================================"
+                    echo "GIT STATUS"
+                    echo "======================================"
+
+                    git status --short
                 '''
             }
         }
 
 
         /*
-         * 2. Validate Docker Compose
+         * 2. Verify project files
+         */
+        stage('Verify Project Structure') {
+
+            steps {
+
+                echo '======================================'
+                echo 'Verifying project structure'
+                echo '======================================'
+
+                sh '''
+                    set -e
+
+                    echo "Workspace:"
+                    pwd
+
+                    echo ""
+                    echo "Checking frontend..."
+
+                    if [ -d "./frontend" ]; then
+                        echo "Frontend directory exists."
+                        ls -la ./frontend
+                    else
+                        echo "ERROR: frontend directory does not exist."
+                        echo "Current directory contents:"
+                        ls -la
+                        exit 1
+                    fi
+
+                    echo ""
+                    echo "Checking API..."
+
+                    if [ -d "./api" ]; then
+                        echo "API directory exists."
+                        ls -la ./api
+                    else
+                        echo "ERROR: api directory does not exist."
+                        exit 1
+                    fi
+
+                    echo ""
+                    echo "Checking database..."
+
+                    if [ -d "./database" ]; then
+                        echo "Database directory exists."
+                        ls -la ./database
+                    else
+                        echo "ERROR: database directory does not exist."
+                        exit 1
+                    fi
+
+                    echo ""
+                    echo "Checking docker-compose.yml..."
+
+                    if [ -f "./docker-compose.yml" ]; then
+                        echo "docker-compose.yml exists."
+                        ls -l ./docker-compose.yml
+                    else
+                        echo "ERROR: docker-compose.yml does not exist."
+                        exit 1
+                    fi
+
+                    echo ""
+                    echo "Project structure verified successfully."
+                '''
+            }
+        }
+
+
+        /*
+         * 3. Validate Docker Compose
          */
         stage('Validate Docker Compose') {
 
             steps {
 
                 echo '======================================'
-                echo 'Validating Docker Compose configuration'
+                echo 'Validating Docker Compose'
                 echo '======================================'
 
                 sh '''
@@ -84,10 +185,7 @@ pipeline {
 
 
         /*
-         * 3. Create Docker Secrets
-         *
-         * Secrets come from Jenkins Credentials.
-         * They are not stored in GitHub.
+         * 4. Create Docker secrets
          */
         stage('Create Docker Secrets') {
 
@@ -120,7 +218,9 @@ pipeline {
                     sh '''
                         set +x
 
-                        echo "Creating Docker secret files..."
+                        echo "======================================"
+                        echo "Creating Docker secret files"
+                        echo "======================================"
 
                         mkdir -p secrets
 
@@ -138,10 +238,8 @@ pipeline {
 
                         chmod 600 secrets/*
 
-                        echo "Docker secret files created successfully."
+                        echo "Docker secret files created."
 
-                        echo ""
-                        echo "Secret files:"
                         ls -la secrets
                     '''
                 }
@@ -150,30 +248,32 @@ pipeline {
 
 
         /*
-         * 4. Build Docker Images
+         * 5. Build Docker images
          */
         stage('Build Docker Images') {
 
             steps {
 
                 echo '======================================'
-                echo 'Building Docker images...'
+                echo 'Building Docker Images'
                 echo '======================================'
 
                 sh '''
+                    set -e
+
                     echo "Current workspace:"
                     pwd
 
                     echo ""
                     echo "Frontend:"
-                    ls -la frontend
+                    ls -la ./frontend
 
                     echo ""
                     echo "API:"
-                    ls -la api
+                    ls -la ./api
 
                     echo ""
-                    echo "Building Docker images..."
+                    echo "Docker Compose build:"
 
                     docker compose build
                 '''
@@ -182,14 +282,14 @@ pipeline {
 
 
         /*
-         * 5. Deploy application
+         * 6. Deploy application
          */
         stage('Deploy Docker Application') {
 
             steps {
 
                 echo '======================================'
-                echo 'Starting Docker containers...'
+                echo 'Starting Docker containers'
                 echo '======================================'
 
                 sh '''
@@ -200,14 +300,14 @@ pipeline {
 
 
         /*
-         * 6. Verify containers
+         * 7. Verify containers
          */
         stage('Verify Containers') {
 
             steps {
 
                 echo '======================================'
-                echo 'Checking Docker containers...'
+                echo 'Checking Docker containers'
                 echo '======================================'
 
                 sh '''
@@ -218,14 +318,14 @@ pipeline {
 
 
         /*
-         * 7. API Health Check
+         * 8. Health check
          */
         stage('Health Check') {
 
             steps {
 
                 echo '======================================'
-                echo 'Checking API health...'
+                echo 'Checking API health'
                 echo '======================================'
 
                 sh '''
@@ -256,7 +356,6 @@ pipeline {
             echo '======================================'
             echo 'Docker application deployed successfully!'
             echo '======================================'
-
         }
 
         failure {
@@ -264,9 +363,13 @@ pipeline {
             echo '======================================'
             echo 'Docker deployment failed!'
             echo '======================================'
-
         }
 
-    }
+        always {
 
+            echo '======================================'
+            echo 'Pipeline completed'
+            echo '======================================'
+        }
+    }
 }
