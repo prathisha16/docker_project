@@ -3,74 +3,95 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: dockerApp-frontend
+    container_name: docker-frontend
     ports:
       - "8080:80"
     depends_on:
-      - api
+      api:
+        condition: service_started
     networks:
-      - dockerApp-network
+      - docker-network
     restart: always
 
   api:
     build:
       context: ./api
-    container_name: dockerApp-api
+    container_name: docker-api
     ports:
       - "5000:5000"
     depends_on:
-      - mysql
-    networks:
-      - dockerApp-network
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
     secrets:
       - mysql_user
       - mysql_password
       - mysql_database
-    environment:
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER_FILE: /run/secrets/mysql_user
-      DB_PASSWORD_FILE: /run/secrets/mysql_password
-      DB_NAME_FILE: /run/secrets/mysql_database
+    networks:
+      - docker-network
     restart: always
 
   mysql:
     image: mysql:8.0
-    container_name: dockerApp-mysql
-    networks:
-      - dockerApp-network
+    container_name: docker-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      MYSQL_DATABASE_FILE: /run/secrets/mysql_database
+      MYSQL_USER_FILE: /run/secrets/mysql_user
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+
     secrets:
       - mysql_root_password
       - mysql_user
       - mysql_password
       - mysql_database
-    environment:
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
-      MYSQL_USER_FILE: /run/secrets/mysql_user
-      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
-      MYSQL_DATABASE_FILE: /run/secrets/mysql_database
+
     volumes:
-      - mysql_data:/var/lib/mysql
+      - docker_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    networks:
+      - docker-network
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "--password=$$MYSQL_ROOT_PASSWORD"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
     restart: always
 
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: dockerApp-phpmyadmin
+    container_name: docker-phpmyadmin
     ports:
       - "8081:80"
-    depends_on:
-      - mysql
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
-      - dockerApp-network
+      - docker-network
     restart: always
 
 
 networks:
 
-  dockerApp-network:
+  docker-network:
     driver: bridge
     ipam:
       config:
@@ -79,7 +100,7 @@ networks:
 
 volumes:
 
-  mysql_data:
+  docker_data:
     driver: local
 
 
