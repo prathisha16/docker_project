@@ -49,22 +49,28 @@ pipeline {
                         find . -maxdepth 2 -print | sort
 
                         echo "======================================"
-                        echo "FRONTEND"
+                        echo "FRONTEND DIRECTORY"
                         echo "======================================"
 
-                        ls -la frontend
+                        ls -la "frontend "
 
                         echo "======================================"
-                        echo "API"
+                        echo "API DIRECTORY"
                         echo "======================================"
 
-                        ls -la api
+                        ls -la "api "
 
                         echo "======================================"
-                        echo "DATABASE"
+                        echo "DATABASE DIRECTORY"
                         echo "======================================"
 
-                        ls -la database
+                        ls -la "database "
+
+                        echo "======================================"
+                        echo "SECRETS DIRECTORY"
+                        echo "======================================"
+
+                        ls -la "secrets "
 
                         echo "======================================"
                         echo "DOCKER COMPOSE"
@@ -142,25 +148,29 @@ pipeline {
                             echo "Creating Docker secrets"
                             echo "======================================"
 
-                            mkdir -p secrets
+                            /*
+                             * IMPORTANT:
+                             * The directory name is "secrets "
+                             * with a trailing space.
+                             */
 
                             printf '%s' "$MYSQL_ROOT_PASSWORD" \
-                                > secrets/mysql_root_password
+                                > "secrets /mysql_root_password"
 
                             printf '%s' "$MYSQL_USER" \
-                                > secrets/mysql_user
+                                > "secrets /mysql_user"
 
                             printf '%s' "$MYSQL_PASSWORD" \
-                                > secrets/mysql_password
+                                > "secrets /mysql_password"
 
                             printf '%s' "$MYSQL_DATABASE" \
-                                > secrets/mysql_database
+                                > "secrets /mysql_database"
 
-                            chmod 600 secrets/*
+                            chmod 600 "secrets "/*
 
-                            echo "Docker secrets created successfully."
+                            echo "Docker secret files created successfully."
 
-                            ls -la secrets
+                            ls -la "secrets "
                         '''
                     }
                 }
@@ -188,11 +198,19 @@ pipeline {
 
                         echo ""
                         echo "Frontend:"
-                        ls -la frontend
+                        ls -la "frontend "
 
                         echo ""
                         echo "API:"
-                        ls -la api
+                        ls -la "api "
+
+                        echo ""
+                        echo "Database:"
+                        ls -la "database "
+
+                        echo ""
+                        echo "Secrets:"
+                        ls -la "secrets "
 
                         echo ""
                         echo "Building Docker images..."
